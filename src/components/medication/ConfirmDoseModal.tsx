@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { VoiceNoteRecorder } from '@/components/voice-notes/VoiceNoteRecorder';
 import { useVoiceNoteStore, type VoiceNote } from '@/store/voice-note-store';
+import { DoseConfirmation } from './DoseConfirmation';
 
 interface ConfirmDoseModalProps {
   dose: MedicationDoseForDay;
@@ -39,6 +40,7 @@ export function ConfirmDoseModal({ dose, open, onClose }: ConfirmDoseModalProps)
   const [notes, setNotes] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<DoseStatus | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const handleConfirm = (status: DoseStatus) => {
     setSelectedStatus(status);
@@ -55,12 +57,28 @@ export function ConfirmDoseModal({ dose, open, onClose }: ConfirmDoseModalProps)
       recordDose(dose.medication.id, dose.time, selectedDate, status, notes || undefined);
     }
     
-    setTimeout(() => {
-      onClose();
-      setNotes('');
-      setSelectedStatus(null);
-      setShowVoiceRecorder(false);
-    }, 300);
+    // Mostrar animación de confirmación SOLO si es "taken"
+    if (status === 'taken') {
+      setShowConfirmation(true);
+      // El modal se cerrará cuando termine la animación
+    } else {
+      // Para otros estados, cerrar inmediatamente
+      setTimeout(() => {
+        onClose();
+        setNotes('');
+        setSelectedStatus(null);
+        setShowVoiceRecorder(false);
+      }, 300);
+    }
+  };
+
+  // Callback cuando termina la animación de confirmación
+  const handleConfirmationComplete = () => {
+    setShowConfirmation(false);
+    onClose();
+    setNotes('');
+    setSelectedStatus(null);
+    setShowVoiceRecorder(false);
   };
 
   // Handler para cuando se crea una nota de voz
@@ -249,6 +267,12 @@ export function ConfirmDoseModal({ dose, open, onClose }: ConfirmDoseModalProps)
           )}
         </div>
       </DialogContent>
+
+      {/* Animación de confirmación positiva */}
+      <DoseConfirmation 
+        show={showConfirmation} 
+        onComplete={handleConfirmationComplete}
+      />
     </Dialog>
   );
 }
