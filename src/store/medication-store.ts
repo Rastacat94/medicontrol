@@ -12,6 +12,8 @@ import {
   CaregiverAlert
 } from '@/types/medication';
 import { v4 as uuidv4 } from 'uuid';
+import { createClient } from '@/lib/supabase';
+import { useAuthStore } from './auth-store';
 
 interface MedicationStore {
   // Estado
@@ -34,9 +36,9 @@ interface MedicationStore {
   setAlerts: (alerts: CaregiverAlert[]) => void;
   
   // Acciones de medicamentos
-  addMedication: (medication: Omit<Medication, 'id' | 'createdAt' | 'updatedAt'>) => Medication;
-  updateMedication: (id: string, updates: Partial<Medication>) => void;
-  deleteMedication: (id: string) => void;
+  addMedication: (medication: Omit<Medication, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Medication>;
+  updateMedication: (id: string, updates: Partial<Medication>) => Promise<void>;
+  deleteMedication: (id: string) => Promise<void>;
   toggleMedicationStatus: (id: string) => void;
   
   // Control de inventario
@@ -44,8 +46,8 @@ interface MedicationStore {
   getLowStockMedications: () => Medication[];
   
   // Acciones de registro de dosis
-  recordDose: (medicationId: string, scheduledTime: string, date: string, status: DoseStatus, notes?: string) => void;
-  updateDoseRecord: (recordId: string, updates: Partial<DoseRecord>) => void;
+  recordDose: (medicationId: string, scheduledTime: string, date: string, status: DoseStatus, notes?: string) => Promise<void>;
+  updateDoseRecord: (recordId: string, updates: Partial<DoseRecord>) => Promise<void>;
   
   // Acciones de efectos secundarios
   addSideEffect: (effect: Omit<SideEffectNote, 'id' | 'createdAt'>) => void;
@@ -120,7 +122,7 @@ export const useMedicationStore = create<MedicationStore>()(
       setAlerts: (alerts) => set({ alerts }),
       
       // Acciones de medicamentos
-      addMedication: (medicationData) => {
+      addMedication: async (medicationData) => {
         const now = new Date().toISOString();
         const newMedication: Medication = {
           ...medicationData,
@@ -137,10 +139,45 @@ export const useMedicationStore = create<MedicationStore>()(
           medications: [...state.medications, newMedication]
         }));
         
+        // Guardar en Supabase
+        try {
+          const supabase = createClient();
+          const user = useAuthStore.getState().user;
+          
+          if (user) {
+            await supabase.from('medications').insert({
+              id: newMedication.id,
+              user_id: user.id,
+              name: newMedication.name,
+              generic_name: newMedication.genericName || null,
+              dose: newMedication.dose,
+              dose_unit: newMedication.doseUnit,
+              frequency_type: newMedication.frequencyType,
+              frequency_value: newMedication.frequencyValue,
+              schedules: newMedication.schedules,
+              instructions: newMedication.instructions || [],
+              notes: newMedication.notes || null,
+              start_date: newMedication.startDate,
+              end_date: newMedication.endDate || null,
+              status: newMedication.status,
+              prescribed_by: newMedication.prescribedBy || null,
+              color: newMedication.color,
+              stock: newMedication.stock ?? 0,
+              stock_unit: newMedication.stockUnit || newMedication.doseUnit,
+              low_stock_threshold: newMedication.lowStockThreshold ?? 5,
+              is_critical: newMedication.isCritical ?? false,
+              critical_alert_delay: newMedication.criticalAlertDelay ?? 60,
+            });
+            console.log('[Supabase] Medication saved:', newMedication.id);
+          }
+        } catch (error) {
+          console.error('[Supabase] Error saving medication:', error);
+        }
+        
         return newMedication;
       },
       
-      updateMedication: (id, updates) => {
+      updateMedication: async (id, updates) => {
         set((state) => ({
           medications: state.medications.map((med) =>
             med.id === id
@@ -148,13 +185,64 @@ export const useMedicationStore = create<MedicationStore>()(
               : med
           )
         }));
+        
+        // Actualizar en Supabase
+        try {
+          const supabase = createClient();
+          const user = useAuthStore.getState().user;
+          
+          if (user) {
+            const dbUpdates: Record<string, unknown> = {};
+            if (updates.name !== undefined) dbUpdates.name = updates.name;
+            if (updates.genericName !== undefined) dbUpdates.generic_name = updates.genericName;
+            if (updates.dose !== undefined) dbUpdates.dose = updates.dose;
+            if (updates.doseUnit !== undefined) dbUpdates.dose_unit = updates.doseUnit;
+            if (updates.frequencyType !== undefined) dbUpdates.frequency_type = updates.frequencyType;
+            if (updates.frequencyValue !== undefined) dbUpdates.frequency_value = updates.frequencyValue;
+            if (updates.schedules !== undefined) dbUpdates.schedules = updates.schedules;
+            if (updates.instructions !== undefined) dbUpdates.instructions = updates.instructions;
+            if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+            if (updates.startDate !== undefined) dbUpdates.start_date = updates.startDate;
+            if (updates.endDate !== undefined) dbUpdates.end_date = updates.endDate;
+            if (updates.status !== undefined) dbUpdates.status = updates.status;
+            if (updates.prescribedBy !== undefined) dbUpdates.prescribed_by = updates.prescribedBy;
+            if (updates.color !== undefined) dbUpdates.color = updates.color;
+            if (updates.stock !== undefined) dbUpdates.stock = updates.stock;
+            if (updates.stockUnit !== undefined) dbUpdates.stock_unit = updates.stockUnit;
+            if (updates.lowStockThreshold !== undefined) dbUpdates.low_stock_threshold = updates.lowStockThreshold;
+            if (updates.isCritical !== undefined) dbUpdates.is_critical = updates.isCritical;
+            if (updates.criticalAlertDelay !== undefined) dbUpdates.critical_alert_delay = updates.criticalAlertDelay;
+            dbUpdates.updated_at = new Date().toISOString();
+            
+            await supabase.from('medications').update(dbUpdates).eq('id', id);
+            console.log('[Supabase] Medication updated:', id);
+          }
+        } catch (error) {
+          console.error('[Supabase] Error updating medication:', error);
+        }
       },
       
-      deleteMedication: (id) => {
+      deleteMedication: async (id) => {
         set((state) => ({
           medications: state.medications.filter((med) => med.id !== id),
           doseRecords: state.doseRecords.filter((rec) => rec.medicationId !== id)
         }));
+        
+        // Eliminar de Supabase
+        try {
+          const supabase = createClient();
+          const user = useAuthStore.getState().user;
+          
+          if (user) {
+            // Primero eliminar registros de dosis relacionados
+            await supabase.from('dose_records').delete().eq('medication_id', id);
+            // Luego eliminar el medicamento
+            await supabase.from('medications').delete().eq('id', id);
+            console.log('[Supabase] Medication deleted:', id);
+          }
+        } catch (error) {
+          console.error('[Supabase] Error deleting medication:', error);
+        }
       },
       
       toggleMedicationStatus: (id) => {
@@ -213,7 +301,7 @@ export const useMedicationStore = create<MedicationStore>()(
       },
       
       // Acciones de registro de dosis
-      recordDose: (medicationId, scheduledTime, date, status, notes) => {
+      recordDose: async (medicationId, scheduledTime, date, status, notes) => {
         const now = new Date().toISOString();
         const state = get();
         
@@ -240,9 +328,31 @@ export const useMedicationStore = create<MedicationStore>()(
         set((state) => ({
           doseRecords: [...state.doseRecords, newRecord]
         }));
+        
+        // Guardar en Supabase
+        try {
+          const supabase = createClient();
+          const user = useAuthStore.getState().user;
+          
+          if (user) {
+            await supabase.from('dose_records').insert({
+              id: newRecord.id,
+              user_id: user.id,
+              medication_id: medicationId,
+              scheduled_time: scheduledTime,
+              date: date,
+              status: status,
+              notes: notes || null,
+              actual_time: status !== 'pending' ? now : null,
+            });
+            console.log('[Supabase] Dose record saved:', newRecord.id);
+          }
+        } catch (error) {
+          console.error('[Supabase] Error saving dose record:', error);
+        }
       },
       
-      updateDoseRecord: (recordId, updates) => {
+      updateDoseRecord: async (recordId, updates) => {
         set((state) => ({
           doseRecords: state.doseRecords.map((rec) =>
             rec.id === recordId
@@ -250,6 +360,24 @@ export const useMedicationStore = create<MedicationStore>()(
               : rec
           )
         }));
+        
+        // Actualizar en Supabase
+        try {
+          const supabase = createClient();
+          const user = useAuthStore.getState().user;
+          
+          if (user) {
+            const dbUpdates: Record<string, unknown> = {};
+            if (updates.status !== undefined) dbUpdates.status = updates.status;
+            if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+            if (updates.actualTime !== undefined) dbUpdates.actual_time = updates.actualTime;
+            
+            await supabase.from('dose_records').update(dbUpdates).eq('id', recordId);
+            console.log('[Supabase] Dose record updated:', recordId);
+          }
+        } catch (error) {
+          console.error('[Supabase] Error updating dose record:', error);
+        }
       },
       
       // Acciones de efectos secundarios

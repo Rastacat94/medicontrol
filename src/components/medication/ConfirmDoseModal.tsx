@@ -19,14 +19,16 @@ import {
   Pill,
   AlertCircle,
   MessageSquare,
-  Mic
+  Mic,
+  HelpCircle
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { VoiceNoteRecorder } from '@/components/voice-notes/VoiceNoteRecorder';
 import { useVoiceNoteStore, type VoiceNote } from '@/store/voice-note-store';
 import { DoseConfirmation } from './DoseConfirmation';
+import { DifficultyAlertModal } from '@/components/caregiver/DifficultyAlertModal';
 
 interface ConfirmDoseModalProps {
   dose: MedicationDoseForDay;
@@ -35,12 +37,33 @@ interface ConfirmDoseModalProps {
 }
 
 export function ConfirmDoseModal({ dose, open, onClose }: ConfirmDoseModalProps) {
-  const { recordDose, updateDoseRecord, selectedDate } = useMedicationStore();
+  const { recordDose, updateDoseRecord, selectedDate, caregivers } = useMedicationStore();
   const { addVoiceNote } = useVoiceNoteStore();
   const [notes, setNotes] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<DoseStatus | null>(null);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  
+  // Estados para detección de dificultad
+  const [showHelpButton, setShowHelpButton] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  
+  // Detectar si el usuario tarda mucho en confirmar (más de 30 segundos)
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    
+    // Mostrar botón de ayuda después de 30 segundos
+    const timeout = setTimeout(() => {
+      setShowHelpButton(true);
+    }, 30000);
+    
+    return () => {
+      clearTimeout(timeout);
+      setShowHelpButton(false);
+    };
+  }, [open]);
 
   const handleConfirm = (status: DoseStatus) => {
     setSelectedStatus(status);
@@ -265,6 +288,18 @@ export function ConfirmDoseModal({ dose, open, onClose }: ConfirmDoseModalProps)
               Registrado a las {format(new Date(dose.record.actualTime), 'HH:mm', { locale: es })}
             </p>
           )}
+          
+          {/* Botón de ayuda - aparece si tarda mucho y tiene cuidadores */}
+          {showHelpButton && caregivers.length > 0 && (
+            <Button
+              variant="outline"
+              className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
+              onClick={() => setShowHelpModal(true)}
+            >
+              <HelpCircle className="h-4 w-4 mr-2" />
+              ¿Necesitas ayuda? Pedir ayuda a mi cuidador
+            </Button>
+          )}
         </div>
       </DialogContent>
 
@@ -272,6 +307,14 @@ export function ConfirmDoseModal({ dose, open, onClose }: ConfirmDoseModalProps)
       <DoseConfirmation 
         show={showConfirmation} 
         onComplete={handleConfirmationComplete}
+      />
+      
+      {/* Modal de ayuda al cuidador */}
+      <DifficultyAlertModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        context="timeout"
+        medicationName={dose.medication.name}
       />
     </Dialog>
   );

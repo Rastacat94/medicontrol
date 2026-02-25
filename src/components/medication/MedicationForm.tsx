@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMedicationStore, getNextMedicationColor } from '@/store/medication-store';
 import { Medication, InstructionType, DoseUnit, FrequencyType } from '@/types/medication';
 import { checkNewMedicationInteractions } from '@/data/interactions';
@@ -35,8 +35,10 @@ import {
   Save,
   Package,
   Heart,
-  Bell
+  Bell,
+  HelpCircle
 } from 'lucide-react';
+import { DifficultyAlertModal } from '@/components/caregiver/DifficultyAlertModal';
 
 interface MedicationFormProps {
   open: boolean;
@@ -68,7 +70,7 @@ const INSTRUCTIONS: { value: InstructionType; label: string }[] = [
 ];
 
 export function MedicationForm({ open, onClose, editingMedication, scannedData }: MedicationFormProps) {
-  const { medications, addMedication, updateMedication } = useMedicationStore();
+  const { medications, addMedication, updateMedication, caregivers } = useMedicationStore();
   
   // Form state
   const [name, setName] = useState('');
@@ -94,6 +96,29 @@ export function MedicationForm({ open, onClose, editingMedication, scannedData }
   
   // Interaction warnings
   const [interactions, setInteractions] = useState<ReturnType<typeof checkNewMedicationInteractions>>([]);
+  
+  // Difficulty detection - Ayuda al cuidador
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showHelpButton, setShowHelpButton] = useState(false);
+  const [cancelCount, setCancelCount] = useState(0);
+  
+  // Detectar si tarda mucho (más de 45 segundos)
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    
+    // Mostrar botón de ayuda después de 45 segundos
+    const timeout = setTimeout(() => {
+      setShowHelpButton(true);
+    }, 45000);
+    
+    return () => {
+      clearTimeout(timeout);
+      setShowHelpButton(false);
+      setCancelCount(0);
+    };
+  }, [open]);
   
   // Reset form when dialog opens
   useEffect(() => {
@@ -240,6 +265,19 @@ export function MedicationForm({ open, onClose, editingMedication, scannedData }
     }
 
     onClose();
+  };
+
+  // Detectar cancelación para mostrar ayuda
+  const handleCancel = () => {
+    const newCount = cancelCount + 1;
+    setCancelCount(newCount);
+    
+    // Si cancela 2+ veces, mostrar opción de ayuda
+    if (newCount >= 2 && caregivers.length > 0) {
+      setShowHelpModal(true);
+    } else {
+      onClose();
+    }
   };
 
   const getSeverityColor = (severity: string) => {
@@ -614,7 +652,7 @@ export function MedicationForm({ open, onClose, editingMedication, scannedData }
 
           {/* Submit buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={handleCancel}>
               Cancelar
             </Button>
             <Button 
@@ -627,7 +665,26 @@ export function MedicationForm({ open, onClose, editingMedication, scannedData }
             </Button>
           </div>
         </div>
+
+        {/* Botón flotante de ayuda */}
+        {showHelpButton && caregivers.length > 0 && (
+          <Button
+            onClick={() => setShowHelpModal(true)}
+            className="fixed bottom-24 right-4 z-50 h-14 px-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg rounded-full animate-in slide-in-from-right duration-300"
+          >
+            <HelpCircle className="h-5 w-5 mr-2" />
+            Pedir ayuda
+          </Button>
+        )}
       </DialogContent>
+
+      {/* Modal de ayuda para cuidador */}
+      <DifficultyAlertModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        context="medication_form"
+        medicationName={name || 'el medicamento'}
+      />
     </Dialog>
   );
 }
