@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
 import {
   Dialog,
   DialogContent,
@@ -30,14 +29,18 @@ import {
   Minus, 
   Edit3,
   MapPin,
-  Phone,
   Bell,
   Pill,
   TrendingDown,
-  ShoppingCart
+  ShoppingCart,
+  Battery,
+  BatteryLow,
+  BatteryMedium,
+  BatteryWarning
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { StockBattery } from './StockBattery';
 
 interface InventoryViewProps {
   onShowPharmacyFinder?: () => void;
@@ -115,7 +118,6 @@ export function InventoryView({ onShowPharmacyFinder }: InventoryViewProps) {
     const daysRemaining = getDaysRemaining(medication);
     const stock = medication.stock ?? 0;
     const threshold = medication.lowStockThreshold ?? 5;
-    const maxStock = Math.max(threshold * 3, stock);
 
     return (
       <Card className={`transition-all ${stockStatus.status === 'low' ? 'border-amber-300 bg-amber-50' : stockStatus.status === 'empty' ? 'border-red-300 bg-red-50' : ''}`}>
@@ -143,29 +145,19 @@ export function InventoryView({ onShowPharmacyFinder }: InventoryViewProps) {
             </Badge>
           </div>
 
-          {/* Stock progress */}
-          <div className="space-y-2 mb-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Stock actual</span>
-              <span className="font-medium">
-                {stock} {medication.stockUnit || medication.doseUnit}
-              </span>
-            </div>
-            <Progress 
-              value={(stock / maxStock) * 100} 
-              className={`h-2 ${
-                stockStatus.status === 'low' ? '[&>div]:bg-amber-500' : 
-                stockStatus.status === 'empty' ? '[&>div]:bg-red-500' : '[&>div]:bg-green-500'
-              }`}
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>Umbral: {threshold}</span>
-              <span>
-                {daysRemaining === Infinity ? '∞' : 
-                 daysRemaining <= 0 ? 'Sin stock' :
-                 `~${daysRemaining} días`}
-              </span>
-            </div>
+          {/* Stock Battery - Barra tipo batería */}
+          <div className="mb-3">
+            <StockBattery medication={medication} size="md" />
+          </div>
+
+          {/* Info adicional */}
+          <div className="flex justify-between text-xs text-gray-500 mb-3">
+            <span>Umbral: {threshold} unidades</span>
+            <span>
+              {daysRemaining === Infinity ? '∞ días' : 
+               daysRemaining <= 0 ? 'Sin stock' :
+               `~${daysRemaining} días restantes`}
+            </span>
           </div>
 
           {/* Quick actions */}
