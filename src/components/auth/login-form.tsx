@@ -25,15 +25,6 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
     }
   };
 
-  const handleDemoLogin = async (type: 'user' | 'premium') => {
-    clearError();
-    if (type === 'user') {
-      await login('demo@medicontrol.com', 'demo123');
-    } else {
-      await login('premium@medicontrol.com', 'demo123');
-    }
-  };
-
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -134,33 +125,6 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="my-6 flex items-center gap-4">
-          <div className="flex-1 h-px bg-gray-200"></div>
-          <span className="text-sm text-gray-400">o prueba con</span>
-          <div className="flex-1 h-px bg-gray-200"></div>
-        </div>
-
-        {/* Demo Buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => handleDemoLogin('user')}
-            disabled={isLoading}
-            className="py-3 px-4 border-2 border-blue-200 text-blue-600 font-medium rounded-xl hover:bg-blue-50 transition-all disabled:opacity-50"
-          >
-            👤 Demo Usuario
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDemoLogin('premium')}
-            disabled={isLoading}
-            className="py-3 px-4 border-2 border-amber-200 text-amber-600 font-medium rounded-xl hover:bg-amber-50 transition-all disabled:opacity-50"
-          >
-            👑 Demo Premium
-          </button>
-        </div>
-
         {/* Switch to Register */}
         <p className="mt-8 text-center text-gray-600">
           ¿No tienes cuenta?{' '}
@@ -171,15 +135,6 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
           >
             Regístrate gratis
           </button>
-        </p>
-      </div>
-
-      {/* Demo Credentials Info */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-        <p className="text-sm text-blue-700 text-center">
-          <strong>Credenciales demo:</strong><br />
-          Usuario: demo@medicontrol.com | Premium: premium@medicontrol.com<br />
-          <span className="text-blue-600">Contraseña: demo123</span>
         </p>
       </div>
     </div>
