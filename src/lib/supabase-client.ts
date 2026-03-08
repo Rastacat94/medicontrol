@@ -1,7 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/types/database';
 
-// Browser client for client-side operations
 export function createClient() {
   return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,7 +8,6 @@ export function createClient() {
   );
 }
 
-// Helper to check if Supabase is configured
 export function isSupabaseConfigured(): boolean {
   return !!(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -17,13 +15,11 @@ export function isSupabaseConfigured(): boolean {
   );
 }
 
-// Helper to check if the user is online
 export function isOnline(): boolean {
   if (typeof window === 'undefined') return true;
   return navigator.onLine;
 }
 
-// Type helper for Supabase tables
 export type Tables<T extends keyof Database['public']['Tables']> = 
   Database['public']['Tables'][T]['Row'];
 
