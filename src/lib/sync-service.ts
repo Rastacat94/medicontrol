@@ -1,8 +1,7 @@
 // Servicio de sincronización con Supabase
 // Maneja la sincronización de datos entre localStorage y la nube
 
-import { createClient, isSupabaseConfigured, isOnline } from './supabase-client';import type { 
-  MedicationRow, 
+import { createClient, isSupabaseConfigured, isOnline } from './supabase-client';  MedicationRow, 
   DoseRecordRow, 
   CaregiverRow,
   UserRow 
