@@ -1,5 +1,13 @@
-import { createServerClient } from '@supabase/ssr';
+import { createBrowserClient, createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/database';
+
+// Browser client
+export function createClient() {
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // Helper to check if Supabase is configured
 export function isSupabaseConfigured(): boolean {
@@ -9,7 +17,13 @@ export function isSupabaseConfigured(): boolean {
   );
 }
 
-// Type helper for Supabase tables
+// Helper to check if online
+export function isOnline(): boolean {
+  if (typeof window === 'undefined') return true;
+  return navigator.onLine;
+}
+
+// Types
 export type Tables<T extends keyof Database['public']['Tables']> = 
   Database['public']['Tables'][T]['Row'];
 
@@ -19,7 +33,7 @@ export type InsertTables<T extends keyof Database['public']['Tables']> =
 export type UpdateTables<T extends keyof Database['public']['Tables']> = 
   Database['public']['Tables'][T]['Update'];
 
-// Server client for API routes and server components
+// Server client (dynamic import to avoid client-side issues)
 export async function createServerSupabaseClient() {
   const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
@@ -38,7 +52,7 @@ export async function createServerSupabaseClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // The `setAll` method was called from a Server Component.
+            // Server Component context
           }
         },
       },
@@ -46,16 +60,14 @@ export async function createServerSupabaseClient() {
   );
 }
 
-// Admin client with service role key
+// Admin client
 export function createAdminClient() {
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       cookies: {
-        getAll() {
-          return [];
-        },
+        getAll() { return []; },
         setAll() {},
       },
     }
