@@ -1,5 +1,4 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import type { Database } from '@/types/database';
 
 // Helper to check if Supabase is configured
@@ -22,6 +21,7 @@ export type UpdateTables<T extends keyof Database['public']['Tables']> =
 
 // Server client for API routes and server components
 export async function createServerSupabaseClient() {
+  const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
   
   return createServerClient<Database>(
@@ -39,7 +39,6 @@ export async function createServerSupabaseClient() {
             );
           } catch {
             // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing sessions.
           }
         },
       },
@@ -47,7 +46,7 @@ export async function createServerSupabaseClient() {
   );
 }
 
-// Admin client with service role key (for server-side operations that bypass RLS)
+// Admin client with service role key
 export function createAdminClient() {
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
