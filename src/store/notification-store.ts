@@ -34,46 +34,8 @@ interface NotificationStore {
   clearNotifications: () => void;
 }
 
-// Notificaciones demo para testing sin Supabase
-const DEMO_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'demo-1',
-    type: 'caregiver_view',
-    title: '👨‍👩‍👧 María revisó tus registros',
-    message: 'María, tu hija, acaba de revisar tus medicamentos y registros del día. ¡Estás acompañado/a! 💙',
-    is_read: false,
-    priority: 1,
-    created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    data: {
-      caregiver_name: 'María',
-      caregiver_relationship: 'hija',
-      sections_viewed: ['medications', 'doses'],
-    },
-  },
-  {
-    id: 'demo-2',
-    type: 'caregiver_view',
-    title: '👨‍👩‍👧 Carlos revisó tus registros',
-    message: 'Carlos, tu hijo, acaba de revisar tus medicamentos. ¡Estás acompañado/a! 💙',
-    is_read: true,
-    priority: 1,
-    created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    data: {
-      caregiver_name: 'Carlos',
-      caregiver_relationship: 'hijo',
-      sections_viewed: ['medications'],
-    },
-  },
-  {
-    id: 'demo-3',
-    type: 'low_stock',
-    title: '⚠️ Stock bajo',
-    message: 'Tienes Metformina 850mg con solo 3 pastillas restantes.',
-    is_read: false,
-    priority: 2,
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-];
+// Sin datos demo - cada usuario empieza limpio
+const EMPTY_NOTIFICATIONS: Notification[] = [];
 
 export const useNotificationStore = create<NotificationStore>()(
   persist(
@@ -96,19 +58,19 @@ export const useNotificationStore = create<NotificationStore>()(
               lastChecked: new Date().toISOString(),
             });
           } else {
-            // Si falla, usar datos demo
+            // Si falla, usar array vacío
             set({ 
-              notifications: DEMO_NOTIFICATIONS,
-              unreadCount: DEMO_NOTIFICATIONS.filter(n => !n.is_read).length,
+              notifications: EMPTY_NOTIFICATIONS,
+              unreadCount: 0,
               lastChecked: new Date().toISOString(),
             });
           }
         } catch (error) {
           console.error('Error fetching notifications:', error);
-          // En caso de error, usar datos demo
+          // En caso de error, usar array vacío
           set({ 
-            notifications: DEMO_NOTIFICATIONS,
-            unreadCount: DEMO_NOTIFICATIONS.filter(n => !n.is_read).length,
+            notifications: EMPTY_NOTIFICATIONS,
+            unreadCount: 0,
           });
         } finally {
           set({ isLoading: false });
@@ -172,7 +134,7 @@ export const useNotificationStore = create<NotificationStore>()(
       }),
     }),
     {
-      name: 'medicontrol-notifications',
+      name: 'medicontrol-notifications-v2',
       partialize: (state) => ({
         notifications: state.notifications,
         unreadCount: state.unreadCount,
