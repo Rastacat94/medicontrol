@@ -25,6 +25,10 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
     }
   };
 
+  const handleForgotPassword = () => {
+    alert('¿Olvidaste tu contraseña?\n\nContacta a soporte:\n📧 soporte@medicontrol.com\n📱 WhatsApp: +XX XXX XXX XXXX');
+  };
+
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="bg-white rounded-2xl shadow-xl p-8">
@@ -102,6 +106,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
             </label>
             <button
               type="button"
+              onClick={handleForgotPassword}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
               ¿Olvidaste tu contraseña?
